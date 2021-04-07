@@ -1,0 +1,1 @@
+# cargo-msrv-macos-testing
