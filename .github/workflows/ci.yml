@@ -1,0 +1,68 @@
+name: "ci"
+on:
+  push:
+    branches:
+      - master
+      - main
+jobs:
+  test:
+    name: DebuggingCargoMSRV
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      matrix:
+        build: [stable, macos]
+        include:
+          # reference OS
+          - build: stable
+            os: ubuntu-latest
+            rust: stable
+
+          # test OS
+          - build: macos
+            os: macOS-latest
+            rust: stable
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # base install
+      - name: Install Rust, Rustup and Cargo
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+          profile: minimal
+
+      - name: Install cargo-msrv
+        run: cargo install cargo-msrv
+
+      # reference with latest Rust version
+      # Uses `build --all` because that's the default for the latest version on crates.io (0.3.1)
+      - name: Reference point
+        run: cargo build --all
+
+      # test case
+      - name: Run cargo-msrv
+        run: |
+          cargo msrv >> output.txt 2>&1
+
+      - name: Install latest cargo-msrv
+        run: cargo install cargo-msrv --git https://github.com/foresterre/cargo-msrv.git --branch main
+
+      - name: Run latest cargo-msrv
+        run: |
+          cargo msrv --toolchain-file
+
+      - name: Verify writes
+        run: |
+          echo "hello world!" >> a.txt
+
+      - name: Show result
+        run: |
+          cat a.txt
+          echo "Show output of **cargo-msrv 0.3.1**"
+          cat output.txt
+          echo "Show output of **cargo-msrv (dev)**"
+          cat rust-toolchain
